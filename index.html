@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Snake Game S-H-T</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .neon-green-btn {
+      font-size: 3rem;
+      width: 90px;
+      height: 90px;
+      background-color: #000;
+      border: 2px solid #00ff00;
+      color: #00ff00;
+      border-radius: 50%;
+      box-shadow: 0 0 15px #00ff00, 0 0 30px #00ff00;
+      transition: transform 0.2s ease;
+    }
+
+    .neon-green-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 25px #00ff00, 0 0 40px #00ff00;
+    }
+
+    canvas {
+      image-rendering: pixelated;
+    }
+
+    .neon-text {
+      color: #00ff00;
+      text-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00, 0 0 20px #00ff00;
+    }
+  </style>
+</head>
+<body class="bg-black flex flex-col items-center justify-center h-screen space-y-6">
+
+  <!-- Welcome Screen -->
+  <div id="welcome-screen" class="flex flex-col items-center space-y-6">
+    <h1 class="text-4xl neon-text">Created By S-H-T</h1>
+    <button id="start-btn" class="px-6 py-2 bg-green-600 hover:bg-pink-600 text-white rounded-lg">Start Snake Game</button>
+    <footer class="mt-8 text-center text-sm text-white neon-text">
+      Contact Developer: 
+      <a href="http://rm7669.free.nf" class="underline text-blue-400 hover:text-pink-500">Click Me</a>
+    </footer>
+  </div>
+
+  <!-- Level Selection -->
+  <div id="level-screen" class="hidden flex flex-col items-center space-y-4 mt-8">
+    <h2 class="text-2xl neon-text">Snake Game</h2>
+    <div class="flex space-x-4">
+      <button class="difficulty-btn bg-green-500 px-4 py-2 rounded hover:bg-pink-500" data-speed="150">Easy</button>
+      <button class="difficulty-btn bg-yellow-500 px-4 py-2 rounded hover:bg-pink-500" data-speed="100">Medium</button>
+      <button class="difficulty-btn bg-red-500 px-4 py-2 rounded hover:bg-pink-500" data-speed="60">Hard</button>
+    </div>
+  </div>
+
+  <!-- Game Screen -->
+  <div id="game-screen" class="hidden flex flex-col items-center space-y-4 mt-8">
+    <div class="text-white font-bold" id="score">Score: 0</div>
+    <canvas id="gameCanvas" width="400" height="400" class="border-4 border-green-500 rounded-xl bg-neutral-900 shadow-lg"></canvas>
+    <div class="grid grid-cols-3 gap-6">
+      <div></div>
+      <button onclick="changeDir('UP')" class="neon-green-btn">↑</button>
+      <div></div>
+      <button onclick="changeDir('LEFT')" class="neon-green-btn">←</button>
+      <button onclick="changeDir('DOWN')" class="neon-green-btn">↓</button>
+      <button onclick="changeDir('RIGHT')" class="neon-green-btn">→</button>
+    </div>
+    <button id="restart-btn" class="mt-2 px-6 py-2 bg-blue-600 hover:bg-blue-800 text-white rounded-lg">Restart</button>
+  </div>
+
+  <script>
+    let gameSpeed = 100; // Default speed for Medium
+
+    const startBtn = document.getElementById('start-btn');
+    const welcomeScreen = document.getElementById('welcome-screen');
+    const levelScreen = document.getElementById('level-screen');
+    const gameScreen = document.getElementById('game-screen');
+    const scoreDisplay = document.getElementById('score');
+    const gameCanvas = document.getElementById('gameCanvas');
+    const ctx = gameCanvas.getContext('2d');
+
+    const box = 20;
+    let snake = [{ x: 200, y: 200 }];
+    let direction = "RIGHT";
+    let food = spawnFood();
+    let score = 0;
+    let pendingDir = direction;
+
+    // Start Game Button
+    startBtn.addEventListener('click', () => {
+      welcomeScreen.classList.add('hidden');
+      levelScreen.classList.remove('hidden');
+    });
+
+    // Difficulty Buttons
+    document.querySelectorAll('.difficulty-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        gameSpeed = parseInt(btn.getAttribute('data-speed'));
+        levelScreen.classList.add('hidden');
+        gameScreen.classList.remove('hidden');
+        startGame();
+      });
+    });
+
+    // Restart Button
+    document.getElementById('restart-btn').addEventListener('click', startGame);
+
+    // Handle Keypresses
+    document.addEventListener("keydown", (e) => {
+      handleKey(e.keyCode);
+    });
+
+    function handleKey(keyCode) {
+      if (keyCode === 37 && direction !== "RIGHT") pendingDir = "LEFT";
+      else if (keyCode === 38 && direction !== "DOWN") pendingDir = "UP";
+      else if (keyCode === 39 && direction !== "LEFT") pendingDir = "RIGHT";
+      else if (keyCode === 40 && direction !== "UP") pendingDir = "DOWN";
+    }
+
+    function changeDir(dir) {
+      if (dir === "LEFT" && direction !== "RIGHT") pendingDir = "LEFT";
+      else if (dir === "RIGHT" && direction !== "LEFT") pendingDir = "RIGHT";
+      else if (dir === "UP" && direction !== "DOWN") pendingDir = "UP";
+      else if (dir === "DOWN" && direction !== "UP") pendingDir = "DOWN";
+    }
+
+    function spawnFood() {
+      return {
+        x: Math.floor(Math.random() * (gameCanvas.width / box)) * box,
+        y: Math.floor(Math.random() * (gameCanvas.height / box)) * box,
+      };
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+
+      // Draw Snake
+      snake.forEach((segment, index) => {
+        ctx.fillStyle = index === 0 ? "#00ff00" : "#ffffff";
+        ctx.fillRect(segment.x, segment.y, box, box);
+      });
+
+      // Draw Food
+      ctx.fillStyle = "#ff0000";
+      ctx.fillRect(food.x, food.y, box, box);
+
+      direction = pendingDir;
+
+      let head = { ...snake[0] };
+      if (direction === "LEFT") head.x -= box;
+      else if (direction === "RIGHT") head.x += box;
+      else if (direction === "UP") head.y -= box;
+      else if (direction === "DOWN") head.y += box;
+
+      // Wrap around screen
+      if (head.x < 0) head.x = gameCanvas.width - box;
+      else if (head.x >= gameCanvas.width) head.x = 0;
+      if (head.y < 0) head.y = gameCanvas.height - box;
+      else if (head.y >= gameCanvas.height) head.y = 0;
+
+      // Collision with self
+      if (snake.some(segment => segment.x === head.x && segment.y === head.y)) {
+        snake = [{ x: 200, y: 200 }];
+        direction = "RIGHT";
+        food = spawnFood();
+        score = 0;
+      }
+
+      snake.unshift(head);
+
+      // Check if the snake eats the food
+      if (head.x === food.x && head.y === food.y) {
+        food = spawnFood();
+        score++;
+        // Increase speed as the snake grows
+        gameSpeed = Math.max(50, gameSpeed - 10); // Speed up with each food eaten, down to a minimum of 50ms
+        scoreDisplay.textContent = `Score: ${score}`;
+      } else {
+        snake.pop();
+      }
+    }
+
+    function startGame() {
+      snake = [{ x: 200, y: 200 }];
+      direction = "RIGHT";
+      food = spawnFood();
+      score = 0;
+      scoreDisplay.textContent = `Score: ${score}`;
+      setInterval(draw, gameSpeed);
+    }
+  </script>
+</body>
+</html>
